@@ -132,10 +132,11 @@ def flip(data):
 
 #num_class = 16
 
-matfn1 = '/home/ouc/WJJ/ACGAN_2/data/Indian_pines_corrected.mat'
+matfn1 = './data/Indian_pines_corrected.mat'
 data1 = sio.loadmat(matfn1)
 X = data1['indian_pines_corrected']
-matfn2='/home/ouc/WJJ/ACGAN_2/data/Indian_pines_gt.mat'
+print(len(X))
+matfn2='./data/Indian_pines_gt.mat'
 data2=sio.loadmat(matfn2)
 y = data2['indian_pines_gt']
 test_ratio=0.90
@@ -146,10 +147,12 @@ print('Label shape:',y.shape)
 X_pca=applyPCA(X,numComponents=pca_components)
 print('Data shape after PCA :',X_pca.shape)
 [nRow, nColumn, nBand] = X_pca.shape
+print(X_pca.shape)
 pcdata = flip(X_pca)
 groundtruth = flip(y)
 
-num_class = int(np.max(y))
+num_class = 1
+# num_class = int(np.max(y))
 
 
 HalfWidth = 32
@@ -512,7 +515,7 @@ def kappa(testData, k):
 
 best_acc = 0
 
-for epoch in range(1, opt.niter + 1):
+for epoch in range(1, 1 + 1):
     netD.train()
     netG.train()
     right = 0
@@ -529,8 +532,12 @@ for epoch in range(1, opt.niter + 1):
             s_label.resize_(batch_size).fill_(real_label)
             c_label.resize_(batch_size).copy_(label)
             c_output = netD(input)
-
+            print(s_label.shape, input.shape)
             #s_errD_real = s_criterion(s_output, s_label)
+            print(c_output.shape, c_label.shape)
+            for index in range(len(c_label)):
+                if c_label[index] >= num_class+1:
+                    c_label[index] = random.randint(0, num_class)
             c_errD_real = c_criterion(c_output, c_label)
             errD_real =  c_errD_real
             errD_real.backward()
@@ -550,7 +557,8 @@ for epoch in range(1, opt.niter + 1):
             #label = np.random.randint(0, nb_label, batch_size)
             label = np.full(batch_size, nb_label)
 
-            f_label.data.resize_(batch_size).copy_(torch.from_numpy(label))
+            # f_label.data.resize_(batch_size).copy_(torch.from_numpy(label))
+            f_label.resize_(batch_size).copy_(torch.from_numpy(label))
 
 
             fake = netG(noise)
@@ -581,7 +589,7 @@ for epoch in range(1, opt.niter + 1):
         right += correct
         #print('begin spout!')
 
-    if epoch % 5 == 0:
+    if epoch % 1 == 0:
          print('[%d/%d][%d/%d]   D(x): %.4f D(G(z)): %.4f / %.4f=%.4f,  Accuracy: %.4f / %.4f = %.4f'
                 % (epoch, opt.niter, i, len(train_loader),
                   D_x, D_G_z1, D_G_z2, D_G_z1 / D_G_z2,
@@ -589,7 +597,7 @@ for epoch in range(1, opt.niter + 1):
 
         #torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (opt.outf, epoch))
         #torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (opt.outf, epoch))
-    if epoch%5==0:
+    if epoch%1==0:
         netD.eval()
         netG.eval()
         test_loss = 0
@@ -613,7 +621,10 @@ for epoch in range(1, opt.niter + 1):
             #vutils.save_image(data,'%s/real_samples_i_%03d.png' % (opt.outf,epoch))
             #vutils.save_image(fake,'%s/fake_samples_epoch_%03d.png' % (opt.outf, epoch))
             output = netD(data)
-
+            print(output.shape, target.shape)
+            for index in range(len(target)):
+                if target[index] >= num_class+1:
+                    target[index] = random.randint(0, num_class)
             test_loss += c_criterion(output, target).item()
             pred = output.max(1)[1]  # get the index of the max log-probability
             all_Label.extend(pred)
